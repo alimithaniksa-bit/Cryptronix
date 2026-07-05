@@ -1,0 +1,6 @@
+{
+  "name": "Cryptronix",
+  "description": "Cryptronix: A next-generation 3D immersive trading system powered by quantitative AI neural scanners, real-time indicator validations, and multi-factor precision analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

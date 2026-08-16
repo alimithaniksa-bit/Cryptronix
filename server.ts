@@ -576,37 +576,119 @@ app.delete("/api/alerts/:id", (req: Request, res: Response) => {
   res.json({ success: true, message: `Alert ${id} removed` });
 });
 
-// --- Multi-Provider AI Engine Implementation ---
+// --- Universal Multi-Provider AI Engine Implementation ---
 
 interface AISettingsPayload {
-  provider?: 'built_in' | 'gemini' | 'openai' | 'anthropic' | 'groq' | 'deepseek' | 'custom';
+  provider?: 'auto' | 'custom' | 'gemini' | 'openai' | 'anthropic' | 'groq' | 'openrouter' | 'deepseek' | 'built_in';
   apiKey?: string;
   customEndpoint?: string;
   model?: string;
   temperature?: number;
 }
 
-// Endpoint to test AI provider connection and latency
+function extractJsonPayload(text: string): any {
+  const cleaned = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) {
+      return JSON.parse(match[0]);
+    }
+    throw new Error("Unable to parse structured JSON from AI output");
+  }
+}
+
+function resolveAIProviderConfig(config?: AISettingsPayload) {
+  const rawKey = (config?.apiKey || "").trim();
+  let provider = config?.provider || 'auto';
+  let customEndpoint = (config?.customEndpoint || "").trim();
+  let model = (config?.model || "").trim();
+
+  // If no key and no custom endpoint, fall back to built-in
+  if (!rawKey && !customEndpoint) {
+    return {
+      provider: 'built_in' as const,
+      apiKey: process.env.GEMINI_API_KEY || '',
+      baseUrl: '',
+      model: model || 'gemini-2.5-flash',
+      engineName: 'Cryptronix Core Engine'
+    };
+  }
+
+  // Auto-detect provider if 'auto' or 'custom' without explicit provider
+  if (provider === 'auto' || !provider || provider === 'custom') {
+    if (rawKey.startsWith('AIza')) {
+      provider = 'gemini';
+    } else if (rawKey.startsWith('sk-ant')) {
+      provider = 'anthropic';
+    } else if (rawKey.startsWith('gsk_')) {
+      provider = 'groq';
+    } else if (rawKey.startsWith('sk-or-')) {
+      provider = 'openrouter';
+    } else if (rawKey.startsWith('sk-') && customEndpoint.includes('deepseek')) {
+      provider = 'deepseek';
+    } else if (rawKey.startsWith('sk-')) {
+      provider = 'openai';
+    } else {
+      provider = customEndpoint ? 'custom' : 'openai';
+    }
+  }
+
+  let baseUrl = customEndpoint;
+  if (!baseUrl) {
+    if (provider === 'gemini') baseUrl = 'https://generativelanguage.googleapis.com';
+    else if (provider === 'openai') baseUrl = 'https://api.openai.com/v1';
+    else if (provider === 'anthropic') baseUrl = 'https://api.anthropic.com/v1';
+    else if (provider === 'groq') baseUrl = 'https://api.groq.com/openai/v1';
+    else if (provider === 'openrouter') baseUrl = 'https://openrouter.ai/api/v1';
+    else if (provider === 'deepseek') baseUrl = 'https://api.deepseek.com/v1';
+    else baseUrl = 'https://api.openai.com/v1';
+  }
+
+  if (!model) {
+    if (provider === 'gemini') model = 'gemini-2.5-flash';
+    else if (provider === 'anthropic') model = 'claude-3-5-sonnet-20241022';
+    else if (provider === 'groq') model = 'llama-3.3-70b-versatile';
+    else if (provider === 'openrouter') model = 'google/gemini-2.0-flash-exp:free';
+    else if (provider === 'deepseek') model = 'deepseek-chat';
+    else model = 'gpt-4o';
+  }
+
+  const engineName = provider === 'gemini' ? `Google Gemini (${model})`
+    : provider === 'openai' ? `OpenAI (${model})`
+    : provider === 'anthropic' ? `Anthropic Claude (${model})`
+    : provider === 'groq' ? `Groq LPU (${model})`
+    : provider === 'openrouter' ? `OpenRouter (${model})`
+    : provider === 'deepseek' ? `DeepSeek (${model})`
+    : `Custom API (${model})`;
+
+  return { provider, apiKey: rawKey, baseUrl, model, engineName };
+}
+
+// Endpoint to test AI provider connection and verify key
 app.post("/api/ai/test-connection", async (req: Request, res: Response) => {
-  const { provider = 'built_in', apiKey, customEndpoint, model } = req.body as AISettingsPayload;
   const startTime = Date.now();
 
   try {
+    const { provider, apiKey, baseUrl, model, engineName } = resolveAIProviderConfig(req.body as AISettingsPayload);
+
     if (provider === 'built_in') {
       const client = getGeminiClient();
       if (client) {
         await client.models.generateContent({
           model: model || "gemini-2.5-flash",
-          contents: "ping",
+          contents: "Respond with OK",
         });
       }
       const latencyMs = Date.now() - startTime;
       return res.json({
         success: true,
         latencyMs,
-        provider: 'built_in',
-        model: model || 'gemini-2.5-flash',
-        message: `Cryptronix Built-in Core operational (${latencyMs}ms)`
+        provider,
+        model,
+        engineName,
+        message: `Built-in server AI operational (${latencyMs}ms)`
       });
     }
 
@@ -616,17 +698,37 @@ app.post("/api/ai/test-connection", async (req: Request, res: Response) => {
         return res.status(400).json({ success: false, error: "Google Gemini API Key is required." });
       }
       const client = new GoogleGenAI({ apiKey: key });
-      await client.models.generateContent({
-        model: model || "gemini-2.5-flash",
-        contents: "Respond with: OK",
-      });
+      
+      // Try configured model, fallback to 2.0 or 1.5 if needed
+      let tested = false;
+      const modelCandidates = [model, 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'].filter(Boolean);
+      let lastErr = "";
+      
+      for (const m of modelCandidates) {
+        try {
+          await client.models.generateContent({
+            model: m,
+            contents: "Respond with OK",
+          });
+          tested = true;
+          break;
+        } catch (e: any) {
+          lastErr = e.message || String(e);
+        }
+      }
+
+      if (!tested) {
+        throw new Error(lastErr || "Gemini API verification failed");
+      }
+
       const latencyMs = Date.now() - startTime;
       return res.json({
         success: true,
         latencyMs,
         provider: 'gemini',
-        model: model || 'gemini-2.5-flash',
-        message: `Google Gemini API link active (${latencyMs}ms)`
+        model,
+        engineName,
+        message: `Google Gemini API key verified successfully! (${latencyMs}ms)`
       });
     }
 
@@ -634,7 +736,6 @@ app.post("/api/ai/test-connection", async (req: Request, res: Response) => {
       if (!apiKey) {
         return res.status(400).json({ success: false, error: "Anthropic API Key is required." });
       }
-      const targetModel = model || 'claude-3-5-sonnet-20241022';
       const anthropicResp = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
@@ -643,9 +744,9 @@ app.post("/api/ai/test-connection", async (req: Request, res: Response) => {
           "content-type": "application/json"
         },
         body: JSON.stringify({
-          model: targetModel,
-          max_tokens: 5,
-          messages: [{ role: "user", content: "ping" }]
+          model,
+          max_tokens: 10,
+          messages: [{ role: "user", content: "Say OK" }]
         })
       });
 
@@ -653,7 +754,7 @@ app.post("/api/ai/test-connection", async (req: Request, res: Response) => {
         const errText = await anthropicResp.text();
         return res.status(anthropicResp.status).json({
           success: false,
-          error: `Anthropic API error (${anthropicResp.status}): ${errText.substring(0, 150)}`
+          error: `Anthropic API error (${anthropicResp.status}): ${errText.substring(0, 200)}`
         });
       }
 
@@ -662,37 +763,32 @@ app.post("/api/ai/test-connection", async (req: Request, res: Response) => {
         success: true,
         latencyMs,
         provider: 'anthropic',
-        model: targetModel,
+        model,
+        engineName,
         message: `Anthropic Claude API connected (${latencyMs}ms)`
       });
     }
 
-    // OpenAI, Groq, DeepSeek, or Custom OpenAI-compatible endpoint
-    let baseUrl = customEndpoint;
-    if (!baseUrl) {
-      if (provider === 'openai') baseUrl = 'https://api.openai.com/v1';
-      else if (provider === 'groq') baseUrl = 'https://api.groq.com/openai/v1';
-      else if (provider === 'deepseek') baseUrl = 'https://api.deepseek.com/v1';
-      else baseUrl = 'https://api.openai.com/v1';
-    }
-
+    // OpenAI, Groq, OpenRouter, DeepSeek, or Custom OpenAI-compatible endpoint
     const cleanBaseUrl = baseUrl.replace(/\/+$/, '');
-    const targetModel = model || (provider === 'groq' ? 'llama-3.3-70b-versatile' : provider === 'deepseek' ? 'deepseek-chat' : 'gpt-4o');
-
     const headers: Record<string, string> = {
       "Content-Type": "application/json"
     };
     if (apiKey) {
       headers["Authorization"] = `Bearer ${apiKey}`;
     }
+    if (provider === 'openrouter') {
+      headers["HTTP-Referer"] = "https://cryptronix.ai";
+      headers["X-Title"] = "Cryptronix Institutional Scanner";
+    }
 
     const testResp = await fetch(`${cleanBaseUrl}/chat/completions`, {
       method: "POST",
       headers,
       body: JSON.stringify({
-        model: targetModel,
-        messages: [{ role: "user", content: "ping" }],
-        max_tokens: 5
+        model,
+        messages: [{ role: "user", content: "Respond with OK" }],
+        max_tokens: 10
       })
     });
 
@@ -700,7 +796,7 @@ app.post("/api/ai/test-connection", async (req: Request, res: Response) => {
       const errText = await testResp.text();
       return res.status(testResp.status).json({
         success: false,
-        error: `${provider.toUpperCase()} API error (${testResp.status}): ${errText.substring(0, 150)}`
+        error: `${provider.toUpperCase()} API Error (${testResp.status}): ${errText.substring(0, 200)}`
       });
     }
 
@@ -709,8 +805,9 @@ app.post("/api/ai/test-connection", async (req: Request, res: Response) => {
       success: true,
       latencyMs,
       provider,
-      model: targetModel,
-      message: `${provider.toUpperCase()} endpoint connected successfully (${latencyMs}ms)`
+      model,
+      engineName,
+      message: `${engineName} connected and verified! (${latencyMs}ms)`
     });
 
   } catch (err: any) {
@@ -727,45 +824,55 @@ async function executeProviderAnalysis(
   prompt: string,
   systemInstruction: string
 ): Promise<{ text: string; engineName: string }> {
-  const provider = providerConfig?.provider || 'built_in';
+  const { provider, apiKey, baseUrl, model, engineName } = resolveAIProviderConfig(providerConfig);
   const temperature = providerConfig?.temperature ?? 0.2;
 
   if (provider === 'gemini') {
-    const key = providerConfig?.apiKey || process.env.GEMINI_API_KEY;
+    const key = apiKey || process.env.GEMINI_API_KEY;
     const client = key ? new GoogleGenAI({ apiKey: key }) : getGeminiClient();
     if (!client) throw new Error("Gemini client not initialized (missing API key)");
 
-    const modelName = providerConfig?.model || "gemini-2.5-flash";
-    const response = await client.models.generateContent({
-      model: modelName,
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        systemInstruction,
-        temperature
+    const modelCandidates = [model, 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'].filter(Boolean);
+    let lastErr = "";
+    
+    for (const m of modelCandidates) {
+      try {
+        const response = await client.models.generateContent({
+          model: m,
+          contents: prompt,
+          config: {
+            responseMimeType: "application/json",
+            systemInstruction,
+            temperature
+          }
+        });
+        if (response.text) {
+          return {
+            text: response.text,
+            engineName: `Google Gemini (${m})`
+          };
+        }
+      } catch (err: any) {
+        lastErr = err.message || String(err);
       }
-    });
+    }
 
-    return {
-      text: response.text || "",
-      engineName: `Google Gemini (${modelName})`
-    };
+    throw new Error(`Gemini generation error: ${lastErr}`);
   }
 
   if (provider === 'anthropic') {
-    if (!providerConfig?.apiKey) throw new Error("Anthropic API key is required");
-    const modelName = providerConfig?.model || "claude-3-5-sonnet-20241022";
+    if (!apiKey) throw new Error("Anthropic API key is required");
 
     const resp = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        "x-api-key": providerConfig.apiKey,
+        "x-api-key": apiKey,
         "anthropic-version": "2023-06-01",
         "content-type": "application/json"
       },
       body: JSON.stringify({
-        model: modelName,
-        max_tokens: 1200,
+        model,
+        max_tokens: 1500,
         temperature,
         system: systemInstruction,
         messages: [{ role: "user", content: prompt }]
@@ -783,42 +890,31 @@ async function executeProviderAnalysis(
 
     return {
       text,
-      engineName: `Anthropic Claude (${modelName})`
+      engineName: `Anthropic Claude (${model})`
     };
   }
 
-  if (provider === 'openai' || provider === 'groq' || provider === 'deepseek' || provider === 'custom') {
-    let baseUrl = providerConfig?.customEndpoint;
-    if (!baseUrl) {
-      if (provider === 'openai') baseUrl = 'https://api.openai.com/v1';
-      else if (provider === 'groq') baseUrl = 'https://api.groq.com/openai/v1';
-      else if (provider === 'deepseek') baseUrl = 'https://api.deepseek.com/v1';
-      else baseUrl = 'https://api.openai.com/v1';
-    }
-
+  if (provider === 'openai' || provider === 'groq' || provider === 'openrouter' || provider === 'deepseek' || provider === 'custom') {
     const cleanBaseUrl = baseUrl.replace(/\/+$/, '');
-    const modelName = providerConfig?.model || (
-      provider === 'groq' ? 'llama-3.3-70b-versatile' :
-      provider === 'deepseek' ? 'deepseek-chat' :
-      'gpt-4o'
-    );
-
     const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (providerConfig?.apiKey) {
-      headers["Authorization"] = `Bearer ${providerConfig.apiKey}`;
+    if (apiKey) {
+      headers["Authorization"] = `Bearer ${apiKey}`;
+    }
+    if (provider === 'openrouter') {
+      headers["HTTP-Referer"] = "https://cryptronix.ai";
+      headers["X-Title"] = "Cryptronix Institutional Scanner";
     }
 
     const resp = await fetch(`${cleanBaseUrl}/chat/completions`, {
       method: "POST",
       headers,
       body: JSON.stringify({
-        model: modelName,
+        model,
         temperature,
         messages: [
-          { role: "system", content: systemInstruction },
+          { role: "system", content: systemInstruction + " Return valid JSON only, without markdown formatting." },
           { role: "user", content: prompt }
-        ],
-        response_format: { type: "json_object" }
+        ]
       })
     });
 
@@ -832,14 +928,14 @@ async function executeProviderAnalysis(
 
     return {
       text,
-      engineName: `${provider.toUpperCase()} (${modelName})`
+      engineName
     };
   }
 
   // Default Built-in
   const defaultClient = getGeminiClient();
   if (defaultClient) {
-    const modelName = providerConfig?.model || "gemini-2.5-flash";
+    const modelName = model || "gemini-2.5-flash";
     const response = await defaultClient.models.generateContent({
       model: modelName,
       contents: prompt,
@@ -852,7 +948,7 @@ async function executeProviderAnalysis(
 
     return {
       text: response.text || "",
-      engineName: `Cryptronix Core (${modelName})`
+      engineName: `Cryptronix Built-in (${modelName})`
     };
   }
 

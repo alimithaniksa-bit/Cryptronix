@@ -68,7 +68,7 @@ export interface MarketAnalysisResponse {
   engineUsed?: string;
 }
 
-export type AIProvider = 'built_in' | 'gemini' | 'openai' | 'anthropic' | 'groq' | 'deepseek' | 'custom';
+export type AIProvider = 'auto' | 'custom' | 'gemini' | 'openai' | 'anthropic' | 'groq' | 'openrouter' | 'deepseek' | 'built_in';
 
 export interface AISettingsConfig {
   provider: AIProvider;

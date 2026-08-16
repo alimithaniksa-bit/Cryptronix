@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, 
   Key, 
@@ -14,123 +14,19 @@ import {
   RefreshCw, 
   ShieldCheck, 
   Globe, 
-  ExternalLink,
-  Sliders
+  Sliders,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { AIProvider, AISettingsConfig } from '../types';
 
 export const DEFAULT_AI_SETTINGS: AISettingsConfig = {
-  provider: 'built_in',
+  provider: 'auto',
   apiKey: '',
   customEndpoint: '',
   model: 'gemini-2.5-flash',
   temperature: 0.2
 };
-
-const PROVIDER_PRESETS: {
-  id: AIProvider;
-  name: string;
-  badge: string;
-  color: string;
-  defaultEndpoint: string;
-  models: { id: string; label: string; desc: string }[];
-  keyHelpUrl?: string;
-  keyPlaceholder: string;
-}[] = [
-  {
-    id: 'built_in',
-    name: 'Cryptronix Built-in Core',
-    badge: 'Standard Ready',
-    color: 'from-amber-500/20 to-yellow-500/20 text-immersive-gold border-immersive-gold/30',
-    defaultEndpoint: '',
-    models: [
-      { id: 'gemini-2.5-flash', label: 'Quant Flash Core (Default)', desc: 'Built-in server-side quantitative engine' }
-    ],
-    keyPlaceholder: 'No API key needed — uses built-in server matrix'
-  },
-  {
-    id: 'gemini',
-    name: 'Google Gemini',
-    badge: 'Native Google GenAI',
-    color: 'from-blue-500/20 to-cyan-500/20 text-cyan-400 border-cyan-500/30',
-    defaultEndpoint: 'https://generativelanguage.googleapis.com',
-    models: [
-      { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', desc: 'Fast, high-fidelity quantitative analysis' },
-      { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', desc: 'Next-gen real-time multimodal reasoning' },
-      { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro', desc: 'Deep complex technical pattern reasoning' }
-    ],
-    keyHelpUrl: 'https://aistudio.google.com/app/apikey',
-    keyPlaceholder: 'AIzaSy...'
-  },
-  {
-    id: 'openai',
-    name: 'OpenAI',
-    badge: 'GPT-4o Matrix',
-    color: 'from-emerald-500/20 to-teal-500/20 text-emerald-400 border-emerald-500/30',
-    defaultEndpoint: 'https://api.openai.com/v1',
-    models: [
-      { id: 'gpt-4o', label: 'GPT-4o', desc: 'Flagship omni model with exceptional quant logic' },
-      { id: 'gpt-4o-mini', label: 'GPT-4o Mini', desc: 'Affordable, low latency high throughput' },
-      { id: 'gpt-4-turbo', label: 'GPT-4 Turbo', desc: 'High context comprehensive scanner' }
-    ],
-    keyHelpUrl: 'https://platform.openai.com/api-keys',
-    keyPlaceholder: 'sk-proj-...'
-  },
-  {
-    id: 'anthropic',
-    name: 'Anthropic Claude',
-    badge: 'Claude 3.5 Sonnet',
-    color: 'from-orange-500/20 to-amber-500/20 text-orange-400 border-orange-500/30',
-    defaultEndpoint: 'https://api.anthropic.com/v1',
-    models: [
-      { id: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet', desc: 'Industry-leading reasoning & code synthesis' },
-      { id: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku', desc: 'Ultra-fast tactical scan execution' },
-      { id: 'claude-3-opus-20240229', label: 'Claude 3 Opus', desc: 'Heavy analytical synthesis' }
-    ],
-    keyHelpUrl: 'https://console.anthropic.com/settings/keys',
-    keyPlaceholder: 'sk-ant-api03-...'
-  },
-  {
-    id: 'groq',
-    name: 'Groq Cloud',
-    badge: 'Llama 3.3 (LPUs)',
-    color: 'from-purple-500/20 to-pink-500/20 text-purple-400 border-purple-500/30',
-    defaultEndpoint: 'https://api.groq.com/openai/v1',
-    models: [
-      { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B', desc: 'Ultra-fast ~800 tok/s LPU execution' },
-      { id: 'mixtral-8x7b-32768', label: 'Mixtral 8x7B', desc: 'High-speed multi-expert engine' },
-      { id: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B Instant', desc: 'Sub-100ms ultra-low latency response' }
-    ],
-    keyHelpUrl: 'https://console.groq.com/keys',
-    keyPlaceholder: 'gsk_...'
-  },
-  {
-    id: 'deepseek',
-    name: 'DeepSeek AI',
-    badge: 'DeepSeek V3 / R1',
-    color: 'from-blue-600/20 to-indigo-600/20 text-blue-400 border-blue-500/30',
-    defaultEndpoint: 'https://api.deepseek.com/v1',
-    models: [
-      { id: 'deepseek-chat', label: 'DeepSeek-V3 (Chat)', desc: 'State-of-the-art open quant reasoning' },
-      { id: 'deepseek-reasoner', label: 'DeepSeek-R1 (Reasoner)', desc: 'Chain-of-thought mathematical risk breakdown' }
-    ],
-    keyHelpUrl: 'https://platform.deepseek.com/api_keys',
-    keyPlaceholder: 'sk-...'
-  },
-  {
-    id: 'custom',
-    name: 'Custom / Ollama / Local',
-    badge: 'OpenAI-Compatible',
-    color: 'from-gray-500/20 to-zinc-500/20 text-gray-300 border-gray-500/30',
-    defaultEndpoint: 'http://localhost:11434/v1',
-    models: [
-      { id: 'llama3', label: 'Ollama Llama3', desc: 'Local Ollama model' },
-      { id: 'mistral', label: 'Ollama Mistral', desc: 'Local Mistral model' },
-      { id: 'openrouter/auto', label: 'OpenRouter Auto', desc: 'OpenRouter unified gateway' }
-    ],
-    keyPlaceholder: 'Optional for local Ollama / LM Studio, required for proxies'
-  }
-];
 
 interface ApiSettingsModalProps {
   isOpen: boolean;
@@ -145,38 +41,94 @@ export default function ApiSettingsModal({
   config,
   onSaveConfig
 }: ApiSettingsModalProps) {
-  const [form, setForm] = useState<AISettingsConfig>(config);
+  const [apiKey, setApiKey] = useState(config.apiKey || '');
+  const [provider, setProvider] = useState<AIProvider>(config.provider || 'auto');
+  const [customEndpoint, setCustomEndpoint] = useState(config.customEndpoint || '');
+  const [model, setModel] = useState(config.model || '');
+  const [temperature, setTemperature] = useState(config.temperature ?? 0.2);
+  
   const [showKey, setShowKey] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{
     success: boolean;
+    message: string;
     latencyMs?: number;
-    message?: string;
-    error?: string;
+    engineName?: string;
   } | null>(null);
-  const [saveSuccess, setSaveSuccess] = useState(false);
 
+  // Sync state when modal opens
   useEffect(() => {
-    setForm(config);
-    setTestResult(null);
-  }, [config, isOpen]);
+    if (isOpen) {
+      setApiKey(config.apiKey || '');
+      setProvider(config.provider || 'auto');
+      setCustomEndpoint(config.customEndpoint || '');
+      setModel(config.model || '');
+      setTemperature(config.temperature ?? 0.2);
+      setTestResult(null);
+    }
+  }, [isOpen, config]);
 
-  if (!isOpen) return null;
-
-  const currentPreset = PROVIDER_PRESETS.find(p => p.id === form.provider) || PROVIDER_PRESETS[0];
-
-  const handleProviderSelect = (providerId: AIProvider) => {
-    const preset = PROVIDER_PRESETS.find(p => p.id === providerId);
-    if (!preset) return;
-
-    setForm(prev => ({
-      ...prev,
-      provider: providerId,
-      model: preset.models[0]?.id || prev.model,
-      customEndpoint: providerId === 'custom' ? (prev.customEndpoint || preset.defaultEndpoint) : preset.defaultEndpoint
-    }));
-    setTestResult(null);
+  // Key detection helper
+  const detectKeyType = (key: string): { label: string; provider: AIProvider; defaultModel: string; defaultEndpoint: string } => {
+    const trimmed = key.trim();
+    if (!trimmed) {
+      return {
+        label: 'No Key Entered (Using Core Engine)',
+        provider: 'built_in',
+        defaultModel: 'gemini-2.5-flash',
+        defaultEndpoint: ''
+      };
+    }
+    if (trimmed.startsWith('AIza')) {
+      return {
+        label: 'Google Gemini Key (Auto-Detected)',
+        provider: 'gemini',
+        defaultModel: 'gemini-2.5-flash',
+        defaultEndpoint: 'https://generativelanguage.googleapis.com'
+      };
+    }
+    if (trimmed.startsWith('sk-ant')) {
+      return {
+        label: 'Anthropic Claude Key (Auto-Detected)',
+        provider: 'anthropic',
+        defaultModel: 'claude-3-5-sonnet-20241022',
+        defaultEndpoint: 'https://api.anthropic.com/v1'
+      };
+    }
+    if (trimmed.startsWith('gsk_')) {
+      return {
+        label: 'Groq Cloud Key (Auto-Detected)',
+        provider: 'groq',
+        defaultModel: 'llama-3.3-70b-versatile',
+        defaultEndpoint: 'https://api.groq.com/openai/v1'
+      };
+    }
+    if (trimmed.startsWith('sk-or-')) {
+      return {
+        label: 'OpenRouter API Key (Auto-Detected)',
+        provider: 'openrouter',
+        defaultModel: 'google/gemini-2.0-flash-exp:free',
+        defaultEndpoint: 'https://openrouter.ai/api/v1'
+      };
+    }
+    if (trimmed.startsWith('sk-')) {
+      return {
+        label: 'OpenAI / Compatible API Key (Auto-Detected)',
+        provider: 'openai',
+        defaultModel: 'gpt-4o',
+        defaultEndpoint: 'https://api.openai.com/v1'
+      };
+    }
+    return {
+      label: 'Custom API Key / Proxy',
+      provider: 'custom',
+      defaultModel: 'gpt-4o',
+      defaultEndpoint: customEndpoint || 'https://api.openai.com/v1'
+    };
   };
+
+  const detectedInfo = detectKeyType(apiKey);
 
   const handleTestConnection = async () => {
     setIsTesting(true);
@@ -187,10 +139,10 @@ export default function ApiSettingsModal({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          provider: form.provider,
-          apiKey: form.apiKey,
-          customEndpoint: form.customEndpoint,
-          model: form.model
+          provider: provider === 'auto' ? detectedInfo.provider : provider,
+          apiKey: apiKey.trim(),
+          customEndpoint: customEndpoint.trim(),
+          model: (model || (provider === 'auto' ? detectedInfo.defaultModel : '')).trim()
         })
       });
 
@@ -198,19 +150,20 @@ export default function ApiSettingsModal({
       if (resp.ok && data.success) {
         setTestResult({
           success: true,
+          message: data.message || 'API connection verified successfully!',
           latencyMs: data.latencyMs,
-          message: data.message || `Connection active! Latency: ${data.latencyMs}ms`
+          engineName: data.engineName
         });
       } else {
         setTestResult({
           success: false,
-          error: data.error || 'Connection rejected by host'
+          message: data.error || 'Connection test failed. Please check your API key.'
         });
       }
     } catch (err: any) {
       setTestResult({
         success: false,
-        error: err.message || 'Failed to reach backend test route'
+        message: err.message || 'Network request failed. Ensure server is running.'
       });
     } finally {
       setIsTesting(false);
@@ -218,319 +171,251 @@ export default function ApiSettingsModal({
   };
 
   const handleSave = () => {
-    onSaveConfig(form);
-    setSaveSuccess(true);
-    setTimeout(() => {
-      setSaveSuccess(false);
-      onClose();
-    }, 600);
+    const finalProvider = provider;
+    const finalModel = model.trim() || detectedInfo.defaultModel;
+    
+    const newConfig: AISettingsConfig = {
+      provider: finalProvider,
+      apiKey: apiKey.trim(),
+      customEndpoint: customEndpoint.trim(),
+      model: finalModel,
+      temperature
+    };
+
+    onSaveConfig(newConfig);
+    onClose();
   };
 
-  const handleReset = () => {
-    setForm(DEFAULT_AI_SETTINGS);
-    setTestResult(null);
-  };
+  if (!isOpen) return null;
 
   return (
-    <div id="ai_settings_modal_overlay" className="fixed inset-0 z-50 bg-immersive-bg/85 backdrop-blur-md flex items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 10 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 10 }}
-        className="bg-immersive-card border border-immersive-border rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh]"
-      >
-        {/* Modal Header */}
-        <div className="flex items-center justify-between p-5 border-b border-immersive-border bg-immersive-header/50">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-immersive-gold/15 border border-immersive-gold/30 flex items-center justify-center text-immersive-gold shadow-[0_0_15px_rgba(243,186,47,0.2)]">
-              <Cpu className="w-5 h-5 animate-pulse" />
-            </div>
-            <div>
-              <h2 className="text-white font-mono font-bold text-base flex items-center gap-2">
-                AI Engine & Custom API Settings
-                <span className="text-[10px] px-2 py-0.5 bg-immersive-green/10 text-immersive-green border border-immersive-green/30 rounded-full font-mono">
-                  Multi-LLM Matrix
-                </span>
-              </h2>
-              <p className="text-xs text-immersive-muted font-mono">
-                Connect your personal API key or custom endpoint to drive technical AI searches
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-immersive-muted hover:text-white p-1.5 rounded-lg border border-transparent hover:border-immersive-border transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Modal Body */}
-        <div className="p-5 overflow-y-auto space-y-5 flex-1 font-mono text-xs">
-          
-          {/* Provider Selection Tabs */}
-          <div>
-            <label className="block text-[10px] font-bold text-immersive-muted uppercase tracking-wider mb-2">
-              Select AI Engine Provider
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-              {PROVIDER_PRESETS.map((p) => {
-                const isSelected = form.provider === p.id;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => handleProviderSelect(p.id)}
-                    className={`p-2.5 rounded-xl border text-left flex flex-col justify-between transition-all cursor-pointer ${
-                      isSelected
-                        ? `bg-gradient-to-br ${p.color} border-current shadow-sm`
-                        : 'bg-immersive-inner/60 border-immersive-border text-immersive-muted hover:border-immersive-muted/40 hover:text-white'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between w-full mb-1">
-                      <span className={`font-bold text-xs ${isSelected ? 'text-white' : 'text-[#EAECEF]'}`}>
-                        {p.name.split(' ')[0]}
-                      </span>
-                      {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-current shrink-0" />}
-                    </div>
-                    <span className="text-[9px] opacity-75 truncate">{p.badge}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Active Provider Config Box */}
-          <div className="bg-immersive-inner/80 border border-immersive-border rounded-xl p-4 space-y-4">
-            <div className="flex items-center justify-between border-b border-immersive-border/80 pb-2.5">
-              <div className="flex items-center gap-2">
-                <Server className="w-4 h-4 text-immersive-gold" />
-                <span className="font-bold text-white text-xs">{currentPreset.name} Configuration</span>
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 10 }}
+          className="bg-immersive-card border border-immersive-border rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden my-6"
+        >
+          {/* Header */}
+          <div className="p-5 border-b border-immersive-border flex items-center justify-between bg-immersive-inner/50">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-immersive-gold/15 border border-immersive-gold/30 flex items-center justify-center text-immersive-gold">
+                <Zap className="w-4 h-4" />
               </div>
-              {currentPreset.keyHelpUrl && (
-                <a
-                  href={currentPreset.keyHelpUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-[10px] text-immersive-gold hover:underline flex items-center gap-1"
-                >
-                  Get API Key <ExternalLink className="w-3 h-3" />
-                </a>
-              )}
-            </div>
-
-            {/* API Key Input (Hidden if built_in) */}
-            {form.provider !== 'built_in' && (
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-[10px] font-bold text-immersive-muted uppercase flex items-center gap-1.5">
-                    <Key className="w-3.5 h-3.5 text-immersive-gold" />
-                    API Key {form.provider === 'custom' ? '(Optional for local)' : '(Required)'}
-                  </label>
-                  {form.apiKey && (
-                    <button
-                      type="button"
-                      onClick={() => setForm(prev => ({ ...prev, apiKey: '' }))}
-                      className="text-[10px] text-immersive-red hover:underline"
-                    >
-                      Clear Key
-                    </button>
-                  )}
-                </div>
-                <div className="relative">
-                  <input
-                    type={showKey ? 'text' : 'password'}
-                    value={form.apiKey}
-                    onChange={(e) => setForm(prev => ({ ...prev, apiKey: e.target.value }))}
-                    placeholder={currentPreset.keyPlaceholder}
-                    className="w-full bg-immersive-bg border border-immersive-border text-white text-xs rounded-xl py-2.5 pl-3 pr-10 focus:border-immersive-gold/60 outline-none font-mono"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowKey(!showKey)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-immersive-muted hover:text-white cursor-pointer"
-                  >
-                    {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Custom Endpoint URL (for Custom, OpenAI proxy, Groq, Ollama) */}
-            {(form.provider === 'custom' || form.provider === 'openai' || form.provider === 'deepseek' || form.provider === 'groq') && (
-              <div>
-                <label className="block text-[10px] font-bold text-immersive-muted uppercase mb-1.5 flex items-center gap-1.5">
-                  <Globe className="w-3.5 h-3.5 text-cyan-400" />
-                  Base Endpoint URL
-                </label>
-                <input
-                  type="text"
-                  value={form.customEndpoint || ''}
-                  onChange={(e) => setForm(prev => ({ ...prev, customEndpoint: e.target.value }))}
-                  placeholder={currentPreset.defaultEndpoint || 'https://api.openai.com/v1'}
-                  className="w-full bg-immersive-bg border border-immersive-border text-white text-xs rounded-xl p-2.5 focus:border-immersive-gold/60 outline-none font-mono"
-                />
-                <p className="text-[10px] text-immersive-muted mt-1">
-                  {form.provider === 'custom' 
-                    ? 'Use http://localhost:11434/v1 for Ollama, http://localhost:1234/v1 for LM Studio, or your reverse proxy.' 
-                    : 'Default endpoint automatically routes to standard provider gateway.'}
+                <h3 className="text-white font-mono font-bold text-sm uppercase tracking-wider">
+                  Custom AI API Settings
+                </h3>
+                <p className="text-immersive-muted text-xs">
+                  Enter any API key to run real-time quant scans
                 </p>
               </div>
-            )}
-
-            {/* Model Name & Presets */}
-            <div>
-              <label className="block text-[10px] font-bold text-immersive-muted uppercase mb-1.5 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                Target AI Model
-              </label>
-
-              {/* Preset Model Buttons */}
-              {currentPreset.models.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
-                  {currentPreset.models.map((m) => {
-                    const isModelActive = form.model === m.id;
-                    return (
-                      <button
-                        key={m.id}
-                        type="button"
-                        onClick={() => setForm(prev => ({ ...prev, model: m.id }))}
-                        className={`p-2 rounded-lg border text-left transition-all cursor-pointer ${
-                          isModelActive
-                            ? 'bg-immersive-gold/15 border-immersive-gold text-white font-bold'
-                            : 'bg-immersive-bg/70 border-immersive-border text-immersive-muted hover:text-white hover:border-immersive-muted/40'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-[11px]">{m.label}</span>
-                          {isModelActive && <span className="w-1.5 h-1.5 rounded-full bg-immersive-gold animate-pulse" />}
-                        </div>
-                        <span className="text-[9px] text-immersive-muted font-normal block mt-0.5 truncate">{m.desc}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Custom Model Name Input */}
-              <input
-                type="text"
-                value={form.model}
-                onChange={(e) => setForm(prev => ({ ...prev, model: e.target.value }))}
-                placeholder="Or type custom model name (e.g. gpt-4o, llama-3.3-70b-versatile)..."
-                className="w-full bg-immersive-bg border border-immersive-border text-white text-xs rounded-xl p-2.5 focus:border-immersive-gold/60 outline-none font-mono"
-              />
             </div>
+            <button
+              onClick={onClose}
+              className="text-immersive-muted hover:text-white p-1.5 rounded-lg hover:bg-immersive-inner transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
 
-            {/* Temperature / Creativity */}
+          {/* Body */}
+          <div className="p-5 space-y-4">
+            
+            {/* Primary API Key Input */}
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-[10px] font-bold text-immersive-muted uppercase flex items-center gap-1">
-                  <Sliders className="w-3 h-3" />
-                  Sampling Temperature: {form.temperature ?? 0.2}
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-mono font-bold text-white flex items-center gap-1.5">
+                  <Key className="w-3.5 h-3.5 text-immersive-gold" />
+                  Your AI API Key
                 </label>
-                <span className="text-[9px] text-immersive-gold font-bold">
-                  {(form.temperature ?? 0.2) <= 0.2 ? 'Deterministic Quant (Recommended)' : 'Analytical Flow'}
+                <span className="text-[10px] text-immersive-muted">
+                  Supports Gemini, OpenAI, Claude, Groq, OpenRouter, etc.
                 </span>
               </div>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.05"
-                value={form.temperature ?? 0.2}
-                onChange={(e) => setForm(prev => ({ ...prev, temperature: parseFloat(e.target.value) }))}
-                className="w-full accent-immersive-gold cursor-pointer"
-              />
-            </div>
-
-            {/* Test Connection Button & Result */}
-            <div className="pt-2 border-t border-immersive-border/60">
-              <div className="flex items-center gap-3">
+              
+              <div className="relative">
+                <input
+                  type={showKey ? 'text' : 'password'}
+                  value={apiKey}
+                  onChange={(e) => {
+                    setApiKey(e.target.value);
+                    setTestResult(null);
+                  }}
+                  placeholder="Paste your API key here (e.g. AIzaSy..., sk-..., gsk_...)"
+                  className="w-full bg-immersive-bg border border-immersive-border focus:border-immersive-gold rounded-xl px-3.5 py-2.5 text-xs text-white font-mono placeholder:text-immersive-muted/50 focus:outline-none pr-10 transition-colors shadow-inner"
+                />
                 <button
                   type="button"
-                  onClick={handleTestConnection}
-                  disabled={isTesting || (form.provider !== 'built_in' && form.provider !== 'custom' && !form.apiKey)}
-                  className="bg-immersive-inner hover:bg-immersive-inner/80 border border-immersive-border hover:border-immersive-gold/40 text-white font-bold py-2 px-3.5 rounded-xl flex items-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  onClick={() => setShowKey(!showKey)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-immersive-muted hover:text-white p-1"
                 >
-                  <RefreshCw className={`w-3.5 h-3.5 text-immersive-gold ${isTesting ? 'animate-spin' : ''}`} />
-                  {isTesting ? 'Testing API Link...' : 'Test Connection'}
+                  {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
+              </div>
 
-                {testResult && (
-                  <div className={`flex-1 p-2 rounded-xl border text-[11px] flex items-center gap-2 ${
-                    testResult.success 
-                      ? 'bg-immersive-green/10 border-immersive-green/30 text-immersive-green' 
-                      : 'bg-immersive-red/10 border-immersive-red/30 text-immersive-red'
-                  }`}>
-                    {testResult.success ? (
-                      <>
-                        <CheckCircle2 className="w-4 h-4 shrink-0" />
-                        <span className="truncate">{testResult.message} ({testResult.latencyMs}ms)</span>
-                      </>
-                    ) : (
-                      <>
-                        <AlertCircle className="w-4 h-4 shrink-0" />
-                        <span className="truncate">{testResult.error}</span>
-                      </>
-                    )}
-                  </div>
-                )}
+              {/* Real-time Detection Tag */}
+              <div className="mt-2 flex items-center justify-between bg-immersive-inner/60 border border-immersive-border/60 rounded-lg px-3 py-1.5">
+                <span className="text-[11px] font-mono text-immersive-muted flex items-center gap-1.5">
+                  <Sparkles className="w-3 h-3 text-immersive-gold" />
+                  Status:
+                </span>
+                <span className="text-[11px] font-mono font-bold text-immersive-green">
+                  {detectedInfo.label}
+                </span>
               </div>
             </div>
 
-          </div>
+            {/* Advanced Customizations Dropdown Toggle */}
+            <div className="border border-immersive-border/60 rounded-xl overflow-hidden bg-immersive-inner/30">
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="w-full px-3.5 py-2.5 flex items-center justify-between text-xs font-mono text-immersive-gold hover:bg-immersive-inner/50 transition-colors cursor-pointer"
+              >
+                <span className="flex items-center gap-1.5 font-bold">
+                  <Sliders className="w-3.5 h-3.5" />
+                  Optional Endpoint & Model Overrides
+                </span>
+                {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
 
-          {/* Security & Local Storage Notice */}
-          <div className="bg-immersive-inner/40 border border-immersive-border/60 rounded-xl p-3 flex items-start gap-2.5 text-immersive-muted text-[10px] leading-relaxed">
-            <ShieldCheck className="w-4 h-4 text-immersive-green shrink-0 mt-0.5" />
-            <div>
-              <strong className="text-[#EAECEF] block">Zero-Data Exposure Privacy Protocol:</strong>
-              Your custom API keys are kept safely in your local browser storage. Requests are proxied via server-side execution directly to your designated API provider without persistence to permanent databases.
+              {showAdvanced && (
+                <div className="p-3.5 border-t border-immersive-border/60 space-y-3 bg-immersive-bg/50">
+                  {/* Provider Choice */}
+                  <div>
+                    <label className="text-[11px] font-mono text-immersive-muted block mb-1">
+                      Provider Engine
+                    </label>
+                    <select
+                      value={provider}
+                      onChange={(e) => {
+                        const p = e.target.value as AIProvider;
+                        setProvider(p);
+                        setTestResult(null);
+                      }}
+                      className="w-full bg-immersive-inner border border-immersive-border rounded-lg px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-immersive-gold"
+                    >
+                      <option value="auto">✨ Auto-Detect from Key (Recommended)</option>
+                      <option value="gemini">Google Gemini (Gemini 2.5/2.0 Flash)</option>
+                      <option value="openai">OpenAI (GPT-4o / GPT-4o-mini)</option>
+                      <option value="anthropic">Anthropic Claude (Claude 3.5 Sonnet)</option>
+                      <option value="groq">Groq High-Speed (Llama 3.3 70B)</option>
+                      <option value="openrouter">OpenRouter Gateway</option>
+                      <option value="deepseek">DeepSeek (V3 / R1)</option>
+                      <option value="custom">Custom Endpoint (Ollama / Proxy)</option>
+                    </select>
+                  </div>
+
+                  {/* Custom Model Name */}
+                  <div>
+                    <label className="text-[11px] font-mono text-immersive-muted block mb-1">
+                      Model Identifier (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={model}
+                      onChange={(e) => setModel(e.target.value)}
+                      placeholder={`Default: ${detectedInfo.defaultModel}`}
+                      className="w-full bg-immersive-inner border border-immersive-border rounded-lg px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-immersive-gold placeholder:text-immersive-muted/40"
+                    />
+                  </div>
+
+                  {/* Custom Base URL Endpoint */}
+                  <div>
+                    <label className="text-[11px] font-mono text-immersive-muted block mb-1">
+                      Custom Base URL / Endpoint (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={customEndpoint}
+                      onChange={(e) => setCustomEndpoint(e.target.value)}
+                      placeholder="e.g. https://api.openai.com/v1 or http://localhost:11434/v1"
+                      className="w-full bg-immersive-inner border border-immersive-border rounded-lg px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-immersive-gold placeholder:text-immersive-muted/40"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
+
+            {/* Test Connection Output Box */}
+            {testResult && (
+              <motion.div
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`p-3 rounded-xl border text-xs font-mono flex items-start gap-2.5 ${
+                  testResult.success
+                    ? 'bg-immersive-green/10 border-immersive-green/40 text-immersive-green'
+                    : 'bg-immersive-red/10 border-immersive-red/40 text-immersive-red'
+                }`}
+              >
+                {testResult.success ? (
+                  <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                )}
+                <div className="flex-1">
+                  <p className="font-bold">{testResult.message}</p>
+                  {testResult.engineName && (
+                    <p className="text-[10px] opacity-80 mt-0.5">
+                      Engine: {testResult.engineName} {testResult.latencyMs ? `• ${testResult.latencyMs}ms` : ''}
+                    </p>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Security note */}
+            <div className="flex items-center gap-1.5 text-[10px] font-mono text-immersive-muted/80 bg-immersive-inner/20 p-2 rounded-lg border border-immersive-border/30">
+              <ShieldCheck className="w-3.5 h-3.5 text-immersive-gold shrink-0" />
+              <span>Your API keys are stored locally on your device and sent securely through direct TLS calls.</span>
+            </div>
+
           </div>
 
-        </div>
-
-        {/* Modal Footer */}
-        <div className="p-4 border-t border-immersive-border bg-immersive-header/50 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={handleReset}
-            className="text-immersive-muted hover:text-white text-xs font-mono py-2 px-3 rounded-lg transition-colors cursor-pointer"
-          >
-            Reset to Built-in Engine
-          </button>
-
-          <div className="flex items-center gap-2">
+          {/* Footer Actions */}
+          <div className="p-5 border-t border-immersive-border bg-immersive-inner/50 flex flex-col sm:flex-row items-center justify-between gap-3">
             <button
               type="button"
-              onClick={onClose}
-              className="bg-immersive-inner hover:bg-immersive-inner/80 border border-immersive-border text-immersive-muted hover:text-white font-mono text-xs py-2 px-4 rounded-xl transition-colors cursor-pointer"
+              onClick={handleTestConnection}
+              disabled={isTesting}
+              className="w-full sm:w-auto px-4 py-2 bg-immersive-inner hover:bg-immersive-inner/80 border border-immersive-border hover:border-immersive-gold text-white font-mono text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
             >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              className="bg-immersive-green hover:bg-[#02C076EE] text-immersive-bg font-mono font-black text-xs py-2 px-5 rounded-xl flex items-center gap-1.5 shadow-[0_0_15px_rgba(2,192,118,0.25)] transition-all cursor-pointer"
-            >
-              {saveSuccess ? (
+              {isTesting ? (
                 <>
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  SAVED!
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-immersive-gold" />
+                  <span>Verifying API...</span>
                 </>
               ) : (
                 <>
-                  <Zap className="w-3.5 h-3.5 fill-current" />
-                  SAVE & ACTIVATE ENGINE
+                  <Zap className="w-3.5 h-3.5 text-immersive-gold" />
+                  <span>Test API Connection</span>
                 </>
               )}
             </button>
-          </div>
-        </div>
 
-      </motion.div>
-    </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-1/2 sm:w-auto px-3.5 py-2 text-immersive-muted hover:text-white font-mono text-xs font-bold transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                className="w-1/2 sm:w-auto px-5 py-2 bg-immersive-gold hover:bg-immersive-gold/90 text-black font-mono text-xs font-bold rounded-xl transition-all shadow-md cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Save API Key</span>
+              </button>
+            </div>
+          </div>
+
+        </motion.div>
+      </div>
+    </AnimatePresence>
   );
 }

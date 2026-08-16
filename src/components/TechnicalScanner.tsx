@@ -62,19 +62,33 @@ export default function TechnicalScanner({
     );
   };
 
-  const activeProviderName = aiConfig?.provider === 'built_in' || !aiConfig?.provider
-    ? 'Cryptronix Built-in Core'
-    : aiConfig.provider === 'gemini'
-    ? `Google Gemini (${aiConfig.model || 'Flash'})`
-    : aiConfig.provider === 'openai'
-    ? `OpenAI (${aiConfig.model || 'GPT-4o'})`
-    : aiConfig.provider === 'anthropic'
-    ? `Claude (${aiConfig.model || '3.5 Sonnet'})`
-    : aiConfig.provider === 'groq'
-    ? `Groq (${aiConfig.model || 'Llama 3.3'})`
-    : aiConfig.provider === 'deepseek'
-    ? `DeepSeek (${aiConfig.model || 'V3'})`
-    : `Custom API (${aiConfig.model || 'Model'})`;
+  const getActiveProviderName = () => {
+    if (!aiConfig?.apiKey && !aiConfig?.customEndpoint) {
+      return 'Cryptronix Core Engine';
+    }
+    const key = (aiConfig.apiKey || '').trim();
+    if (key.startsWith('AIza')) {
+      return `Gemini AI (${aiConfig.model || 'Flash'})`;
+    }
+    if (key.startsWith('sk-ant')) {
+      return `Claude AI (${aiConfig.model || 'Sonnet'})`;
+    }
+    if (key.startsWith('gsk_')) {
+      return `Groq LPU (${aiConfig.model || 'Llama 3.3'})`;
+    }
+    if (key.startsWith('sk-or-')) {
+      return `OpenRouter (${aiConfig.model || 'AI'})`;
+    }
+    if (key.startsWith('sk-')) {
+      return `OpenAI (${aiConfig.model || 'GPT-4o'})`;
+    }
+    if (aiConfig.customEndpoint) {
+      return `Custom Proxy (${aiConfig.model || 'AI'})`;
+    }
+    return `Custom AI (${aiConfig.model || 'Active'})`;
+  };
+
+  const activeProviderName = getActiveProviderName();
 
   const runAIScan = async () => {
     setLoading(true);

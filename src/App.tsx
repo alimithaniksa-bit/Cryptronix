@@ -339,13 +339,17 @@ export default function App() {
             {/* AI API Provider Settings Button */}
             <button
               onClick={() => setShowApiSettingsModal(true)}
-              className="flex items-center gap-1.5 bg-immersive-inner hover:bg-immersive-inner/80 border border-immersive-border hover:border-immersive-gold/50 text-[#EAECEF] hover:text-immersive-gold text-[11px] font-mono font-bold py-1.5 px-2.5 sm:px-3 rounded-xl transition-all cursor-pointer shadow-sm"
-              title="Configure AI API Providers (OpenAI, Gemini, Claude, Groq, DeepSeek, Custom)"
+              className={`flex items-center gap-1.5 border text-[11px] font-mono font-bold py-1.5 px-2.5 sm:px-3 rounded-xl transition-all cursor-pointer shadow-sm ${
+                aiConfig.apiKey 
+                  ? 'bg-immersive-gold/15 border-immersive-gold/50 text-immersive-gold hover:bg-immersive-gold/25' 
+                  : 'bg-immersive-inner hover:bg-immersive-inner/80 border-immersive-border hover:border-immersive-gold/50 text-[#EAECEF] hover:text-immersive-gold'
+              }`}
+              title="Configure Custom AI API Key (Gemini, OpenAI, Claude, Groq, OpenRouter, etc.)"
             >
               <Settings className="w-3.5 h-3.5 text-immersive-gold" />
-              <span className="hidden sm:inline">AI API:</span>
-              <span className="text-immersive-gold uppercase text-[10px]">
-                {aiConfig.provider === 'built_in' ? 'Core' : aiConfig.provider}
+              <span className="hidden sm:inline">Custom API:</span>
+              <span className={`text-[10px] uppercase font-mono ${aiConfig.apiKey ? 'text-immersive-gold' : 'text-immersive-muted'}`}>
+                {aiConfig.apiKey ? 'Connected' : 'Key Setup'}
               </span>
             </button>
 

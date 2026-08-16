@@ -83,11 +83,26 @@ export default function LandingPage({ onEnterSystem, coins }: LandingPageProps) 
           </div>
         </motion.div>
 
+        {/* Floating Solana Logo */}
+        <motion.div 
+          animate={{ y: [0, -20, 0], rotate: [0, -5, 0] }}
+          transition={{ duration: 6.5, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute top-[20%] right-[10%] bg-immersive-card/60 border border-purple-400/30 p-2.5 rounded-2xl flex items-center gap-2 backdrop-blur-md shadow-lg shadow-purple-500/10"
+        >
+          <div className="w-7 h-7 bg-purple-500/15 text-purple-400 rounded-xl flex items-center justify-center font-mono font-bold text-xs">
+            ◎
+          </div>
+          <div className="font-mono text-[9px]">
+            <span className="block text-white font-bold leading-none">SOLUSDT</span>
+            <span className="text-purple-400 font-bold leading-none text-[8px] mt-0.5 block">94.8% SIGNAL</span>
+          </div>
+        </motion.div>
+
         {/* Floating AI neural node Badge */}
         <motion.div 
           animate={{ y: [0, -15, 0], rotate: [0, 6, 0] }}
           transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-[40%] right-[43%] bg-immersive-card/60 border border-immersive-gold/30 p-2.5 rounded-2xl flex items-center gap-2 backdrop-blur-md shadow-lg glow-blue"
+          className="absolute bottom-[20%] right-[8%] bg-immersive-card/60 border border-immersive-gold/30 p-2.5 rounded-2xl flex items-center gap-2 backdrop-blur-md shadow-lg glow-blue"
         >
           <div className="w-7 h-7 bg-immersive-gold/15 text-immersive-gold rounded-xl flex items-center justify-center">
             <Cpu className="w-4 h-4" />

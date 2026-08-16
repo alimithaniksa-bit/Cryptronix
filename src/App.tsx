@@ -356,22 +356,26 @@ export default function App() {
             <h3 className="text-white text-xs font-mono uppercase tracking-widest font-bold">Cryptronix Live Price Feed</h3>
           </div>
           
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-            {coins.slice(0, 10).map((coin) => (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {coins.map((coin) => (
               <div 
                 key={coin.symbol} 
                 className="bg-immersive-inner/50 border border-immersive-border rounded-xl p-3.5 flex flex-col hover:border-immersive-green/45 transition-colors"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-[#EAECEF] font-mono font-bold text-xs">{coin.symbol.replace("USDT", "")}/USDT</span>
-                  <span className={`text-[10px] font-mono leading-none font-bold ${coin.change24h >= 0 ? 'text-immersive-green' : 'text-immersive-red'}`}>
-                    {coin.change24h >= 0 ? '▲' : '▼'} {coin.change24h}%
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-immersive-gold animate-pulse" />
+                    <span className="text-[#EAECEF] font-mono font-bold text-sm">{coin.symbol.replace("USDT", "")}/USDT</span>
+                    <span className="text-immersive-muted text-[10px] font-mono font-normal">({coin.name})</span>
+                  </div>
+                  <span className={`text-xs font-mono leading-none font-bold ${coin.change24h >= 0 ? 'text-immersive-green' : 'text-immersive-red'}`}>
+                    {coin.change24h >= 0 ? '▲ +' : '▼ '}{coin.change24h}%
                   </span>
                 </div>
-                <div className="text-white text-sm font-bold font-mono mt-1.5">${coin.price.toLocaleString(undefined, { minimumFractionDigits: coin.price < 1 ? 4 : 2 })}</div>
+                <div className="text-white text-base font-bold font-mono mt-2">${coin.price.toLocaleString(undefined, { minimumFractionDigits: coin.price < 1 ? 4 : 2 })}</div>
                 
                 {/* Micro trendsparkline */}
-                <div className="flex items-end gap-0.5 h-4.5 mt-2 overflow-hidden items-stretch">
+                <div className="flex items-end gap-1 h-5 mt-2.5 overflow-hidden items-stretch">
                   {coin.sparkline.map((val, idx) => {
                     const max = Math.max(...coin.sparkline);
                     const min = Math.min(...coin.sparkline);
@@ -379,7 +383,7 @@ export default function App() {
                     return (
                       <div 
                         key={idx} 
-                        className={`flex-1 rounded-sm ${coin.change24h >= 0 ? "bg-immersive-green/20" : "bg-immersive-red/20"}`} 
+                        className={`flex-1 rounded-sm ${coin.change24h >= 0 ? "bg-immersive-green/25" : "bg-immersive-red/25"}`} 
                         style={{ height: `${Math.max(15, heightPercent)}%` }}
                       />
                     );
@@ -655,7 +659,7 @@ export default function App() {
                 </div>
 
                 <p className="text-[10px] text-immersive-muted leading-relaxed border-t border-immersive-border pt-3 font-sans">
-                  Deploying this signal starts live tick tracking on the server. Mithani Signals calculations will dynamically calibrate TP1 (+1.5%), TP2 (+3.5%), TP3 (+6%), and Stop Loss (-2.5%) based on the live target price matrix.
+                  Deploying this signal starts live tick tracking on the server. Cryptronix Signals calculations will dynamically calibrate TP1 (+1.5%), TP2 (+3.5%), TP3 (+6%), and Stop Loss (-2.5%) based on the live target price matrix.
                 </p>
 
                 <div className="grid grid-cols-2 gap-2 mt-4.5 pt-3 border-t border-immersive-border">

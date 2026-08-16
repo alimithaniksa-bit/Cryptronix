@@ -37,7 +37,7 @@ export default function AlertSettings({ alerts, coins, onCreateAlert, onDeleteAl
     <div id="alert_settings_panel" className="bg-immersive-card border border-immersive-border rounded-2xl p-6 shadow-lg">
       <div className="flex items-center gap-2.5 mb-4 border-b border-immersive-border pb-3">
         <Bell className="w-5 h-5 text-immersive-gold animate-bounce" />
-        <h2 className="text-white font-mono font-bold text-base uppercase tracking-wider">Mithani Alert Manager</h2>
+        <h2 className="text-white font-mono font-bold text-base uppercase tracking-wider">Cryptronix Alert Manager</h2>
       </div>
 
       {/* Alert Creator Form */}

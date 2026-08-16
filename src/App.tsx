@@ -19,7 +19,7 @@ import {
   Grid
 } from 'lucide-react';
 
-import { CryptoSignal, CoinTicker, CryptoAlert, MarketAnalysisResponse } from './types';
+import { CryptoSignal, CoinTicker, CryptoAlert, MarketAnalysisResponse, AISettingsConfig } from './types';
 import { soundEngine } from './lib/sound';
 import StatsBanner from './components/StatsBanner';
 import SignalCard from './components/SignalCard';
@@ -27,10 +27,34 @@ import AlertSettings from './components/AlertSettings';
 import TechnicalScanner from './components/TechnicalScanner';
 import LandingPage from './components/LandingPage';
 import CryptronixLogo from './components/CryptronixLogo';
+import ApiSettingsModal, { DEFAULT_AI_SETTINGS } from './components/ApiSettingsModal';
 
 export default function App() {
   // Navigation / View State
   const [showDashboard, setShowDashboard] = useState<boolean>(false);
+
+  // AI API Configuration State
+  const [aiConfig, setAiConfig] = useState<AISettingsConfig>(() => {
+    try {
+      const saved = localStorage.getItem('cryptronix_ai_config');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch {
+      // ignore
+    }
+    return DEFAULT_AI_SETTINGS;
+  });
+  const [showApiSettingsModal, setShowApiSettingsModal] = useState<boolean>(false);
+
+  const handleSaveAiConfig = (newConfig: AISettingsConfig) => {
+    setAiConfig(newConfig);
+    try {
+      localStorage.setItem('cryptronix_ai_config', JSON.stringify(newConfig));
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   // Application Data States
   const [coins, setCoins] = useState<CoinTicker[]>([]);
@@ -311,7 +335,20 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* AI API Provider Settings Button */}
+            <button
+              onClick={() => setShowApiSettingsModal(true)}
+              className="flex items-center gap-1.5 bg-immersive-inner hover:bg-immersive-inner/80 border border-immersive-border hover:border-immersive-gold/50 text-[#EAECEF] hover:text-immersive-gold text-[11px] font-mono font-bold py-1.5 px-2.5 sm:px-3 rounded-xl transition-all cursor-pointer shadow-sm"
+              title="Configure AI API Providers (OpenAI, Gemini, Claude, Groq, DeepSeek, Custom)"
+            >
+              <Settings className="w-3.5 h-3.5 text-immersive-gold" />
+              <span className="hidden sm:inline">AI API:</span>
+              <span className="text-immersive-gold uppercase text-[10px]">
+                {aiConfig.provider === 'built_in' ? 'Core' : aiConfig.provider}
+              </span>
+            </button>
+
             {/* Audio Toggle Indicator */}
             <button
               onClick={() => setSoundEnabled(!soundEnabled)}
@@ -576,7 +613,12 @@ export default function App() {
           <div id="scanners_and_alerts_column" className="space-y-6">
             
             {/* Technical AI Market Scanner */}
-            <TechnicalScanner coins={coins} onDeploySignal={handleDeploySignal} />
+            <TechnicalScanner 
+              coins={coins} 
+              onDeploySignal={handleDeploySignal}
+              aiConfig={aiConfig}
+              onOpenApiSettings={() => setShowApiSettingsModal(true)}
+            />
 
             {/* Automated Alerts configuration */}
             <AlertSettings 
@@ -682,6 +724,14 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* AI API Provider Configuration Modal */}
+      <ApiSettingsModal
+        isOpen={showApiSettingsModal}
+        onClose={() => setShowApiSettingsModal(false)}
+        config={aiConfig}
+        onSaveConfig={handleSaveAiConfig}
+      />
 
       {/* Simple Footer */}
       <footer id="app_footer" className="mt-12 py-6 bg-immersive-header border-t border-immersive-border">

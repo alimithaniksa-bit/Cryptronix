@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { CoinTicker, MarketAnalysisResponse } from '../types';
-import { Cpu, Terminal, Sparkles, Send, Play, CheckCircle, Sliders, ShieldCheck } from 'lucide-react';
+import { CoinTicker, MarketAnalysisResponse, AISettingsConfig } from '../types';
+import { Cpu, Terminal, Sparkles, Send, Play, CheckCircle, Sliders, ShieldCheck, Settings2, Zap } from 'lucide-react';
 
 const CONCEPTS = [
   "Smart Money Concepts (SMC)",
@@ -29,9 +29,16 @@ const ACCURACY_LEVELS = ["90", "92", "94", "96"];
 interface TechnicalScannerProps {
   coins: CoinTicker[];
   onDeploySignal: (signal: MarketAnalysisResponse) => void;
+  aiConfig?: AISettingsConfig;
+  onOpenApiSettings?: () => void;
 }
 
-export default function TechnicalScanner({ coins, onDeploySignal }: TechnicalScannerProps) {
+export default function TechnicalScanner({ 
+  coins, 
+  onDeploySignal,
+  aiConfig,
+  onOpenApiSettings
+}: TechnicalScannerProps) {
   const [selectedCoin, setSelectedCoin] = useState(coins[0]?.symbol || 'BTCUSDT');
   const [concept, setConcept] = useState('Smart Money Concepts (SMC)');
   const [confirmations, setConfirmations] = useState<string[]>(['Order Block Defended', 'RSI Divergence Sync', 'Market Structure Shift']);
@@ -55,19 +62,33 @@ export default function TechnicalScanner({ coins, onDeploySignal }: TechnicalSca
     );
   };
 
+  const activeProviderName = aiConfig?.provider === 'built_in' || !aiConfig?.provider
+    ? 'Cryptronix Built-in Core'
+    : aiConfig.provider === 'gemini'
+    ? `Google Gemini (${aiConfig.model || 'Flash'})`
+    : aiConfig.provider === 'openai'
+    ? `OpenAI (${aiConfig.model || 'GPT-4o'})`
+    : aiConfig.provider === 'anthropic'
+    ? `Claude (${aiConfig.model || '3.5 Sonnet'})`
+    : aiConfig.provider === 'groq'
+    ? `Groq (${aiConfig.model || 'Llama 3.3'})`
+    : aiConfig.provider === 'deepseek'
+    ? `DeepSeek (${aiConfig.model || 'V3'})`
+    : `Custom API (${aiConfig.model || 'Model'})`;
+
   const runAIScan = async () => {
     setLoading(true);
     setScanResult(null);
     setTerminalLogs([]);
     
     const steps = [
-      { text: `Initializing proprietary neural quant link for custom inputs...`, delay: 400 },
-      { text: `Evaluating trading framework: ${concept}...`, delay: 600 },
-      { text: `Restricting to target confidence threshold: >=${accuracyTarget}%...`, delay: 500 },
-      { text: `Synthesizing indicator validation check: ${confirmations.join(", ")}...`, delay: 800 },
-      { text: `Injecting risk profile constraints: ${riskProfile} settings...`, delay: 500 },
-      { text: `Establishing live order depth feed for pair ${selectedCoin}...`, delay: 700 },
-      { text: "Feeding analytical criteria directly to Gemini Flash AI Engine...", delay: 800 }
+      { text: `Initializing quant connection via ${activeProviderName}...`, delay: 350 },
+      { text: `Evaluating trading framework: ${concept}...`, delay: 500 },
+      { text: `Restricting to target confidence threshold: >=${accuracyTarget}%...`, delay: 450 },
+      { text: `Synthesizing indicator validation check: ${confirmations.join(", ")}...`, delay: 600 },
+      { text: `Injecting risk profile constraints: ${riskProfile} settings...`, delay: 450 },
+      { text: `Establishing live order depth feed for pair ${selectedCoin}...`, delay: 550 },
+      { text: `Dispatching payload to ${activeProviderName}...`, delay: 600 }
     ];
 
     for (const step of steps) {
@@ -77,7 +98,7 @@ export default function TechnicalScanner({ coins, onDeploySignal }: TechnicalSca
     }
 
     try {
-      const resp = await fetch("/api/gemini/analyze", {
+      const resp = await fetch("/api/ai/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -85,7 +106,8 @@ export default function TechnicalScanner({ coins, onDeploySignal }: TechnicalSca
           concept,
           confirmations,
           riskProfile,
-          accuracyTarget
+          accuracyTarget,
+          aiSettings: aiConfig
         })
       });
 
@@ -95,9 +117,9 @@ export default function TechnicalScanner({ coins, onDeploySignal }: TechnicalSca
 
       const result = await resp.json();
       setScanResult(result);
-      addLog(`✨ Multi-factor scan successfully generated with ${result.confidence}% confirmed precision!`);
+      addLog(`✨ Multi-factor scan successfully generated via ${result.engineUsed || activeProviderName} with ${result.confidence}% precision!`);
     } catch (err) {
-      addLog("❌ API limit hit. Triggering local high-precision calculation matrix...");
+      addLog("❌ Provider fallback triggered. Executing high-precision local calculation matrix...");
       const coinInfo = coins.find(c => c.symbol === selectedCoin);
       const curPrice = coinInfo ? coinInfo.price : 100;
       const act = (coinInfo && coinInfo.change24h > 0) ? "LONG" : "SHORT";
@@ -120,11 +142,12 @@ export default function TechnicalScanner({ coins, onDeploySignal }: TechnicalSca
         confidence: resolvedAccuracy,
         concept,
         confirmations,
-        reasoning: `Precision quantitative metrics compiled on ${selectedCoin} under ${concept} protocol. Direction confirmed by live ${confirmations.slice(0, 3).join(" & ")} matrices. Price preserves structural support near ${curPrice}. Standard targets at ${curPrice * (1 + tpFactor * 1.2 * dir)} structured.`
+        reasoning: `Precision quantitative metrics compiled on ${selectedCoin} under ${concept} protocol. Direction confirmed by live ${confirmations.slice(0, 3).join(" & ")} matrices. Price preserves structural support near ${curPrice}. Standard targets at ${curPrice * (1 + tpFactor * 1.2 * dir)} structured.`,
+        engineUsed: `${activeProviderName} (Local Fallback)`
       };
 
       setScanResult(fallback);
-      addLog(`✨ Targets computed locally via dynamic parameter matrix completed.`);
+      addLog(`✨ Targets computed via precision parameter matrix completed.`);
     } finally {
       setLoading(false);
     }
@@ -133,19 +156,38 @@ export default function TechnicalScanner({ coins, onDeploySignal }: TechnicalSca
   return (
     <div id="ai_technical_scanner_card" className="bg-immersive-card border border-immersive-border rounded-2xl p-5 shadow-lg flex flex-col h-full justify-between">
       <div id="scanner_header">
-        <div className="flex items-center gap-2.5 mb-3.5 border-b border-immersive-border pb-2.5 justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3.5 border-b border-immersive-border pb-2.5">
           <div className="flex items-center gap-2">
             <Cpu className="w-5 h-5 text-immersive-gold animate-pulse" />
             <h2 className="text-white font-mono font-bold text-sm uppercase tracking-wider">Quant AI Control Console</h2>
           </div>
-          <span className="text-[10px] text-immersive-green border border-immersive-green/30 bg-immersive-green/5 px-2.5 py-0.5 rounded-lg font-mono font-bold animate-pulse">90%+ ACCURACY FILTER</span>
+          
+          {/* Active Engine Badge & Settings Opener */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onOpenApiSettings}
+              className="text-[10px] bg-immersive-inner hover:bg-immersive-inner/80 text-immersive-gold border border-immersive-gold/30 hover:border-immersive-gold px-2.5 py-1 rounded-lg font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+              title="Configure AI API Providers (Gemini, OpenAI, Claude, Groq, DeepSeek, Custom)"
+            >
+              <Settings2 className="w-3 h-3" />
+              <span>{activeProviderName}</span>
+            </button>
+            <span className="text-[10px] text-immersive-green border border-immersive-green/30 bg-immersive-green/5 px-2 py-0.5 rounded-lg font-mono font-bold">
+              90%+ FILTER
+            </span>
+          </div>
         </div>
 
         {/* Configurations Settings Box */}
         <div className="bg-immersive-inner/50 border border-immersive-border rounded-xl p-3 mb-4 space-y-3">
           <div className="flex items-center justify-between text-xs font-mono text-immersive-gold border-b border-immersive-border/60 pb-1.5">
             <span className="flex items-center gap-1"><Sliders className="w-3.5 h-3.5" /> PARAMETER ENGINES</span>
-            <span className="text-[10px] text-immersive-muted">CUSTOM STRATEGY SELECTORS</span>
+            <button
+              onClick={onOpenApiSettings}
+              className="text-[10px] text-cyan-400 hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              <Zap className="w-3 h-3" /> Custom API Settings
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -252,7 +294,7 @@ export default function TechnicalScanner({ coins, onDeploySignal }: TechnicalSca
           <div className="bg-immersive-bg border border-immersive-border rounded-xl p-3.5 font-mono text-xs text-immersive-green space-y-2 mb-3.5 h-[160px] flex flex-col justify-between overflow-hidden shadow-inner">
             <div className="flex items-center gap-1.5 border-b border-immersive-border pb-1.5 text-immersive-green/80">
               <Terminal className="w-4 h-4 animate-spin" />
-              <span>Mithani AI Neural Engine v4.5 Pro</span>
+              <span>{activeProviderName} Active Stream</span>
             </div>
             <div className="flex-1 space-y-0.5 overflow-y-auto max-h-[90px] text-[90%] text-immersive-green">
               {terminalLogs.map((log, idx) => (
@@ -269,7 +311,7 @@ export default function TechnicalScanner({ coins, onDeploySignal }: TechnicalSca
           <div className="bg-immersive-inner/30 border border-immersive-border/60 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center h-[240px] mb-4">
             <Cpu className="w-10 h-10 text-immersive-muted mb-2 animate-pulse" />
             <p className="text-immersive-muted text-xs font-mono max-w-xs leading-relaxed">
-              Diagnostic systems idle. Trigger deep analytics to generate high-probability targets for {selectedCoin}.
+              Diagnostic systems idle. Trigger deep analytics via {activeProviderName} to generate high-probability targets for {selectedCoin}.
             </p>
           </div>
         )}
@@ -280,7 +322,7 @@ export default function TechnicalScanner({ coins, onDeploySignal }: TechnicalSca
             <div className="flex items-center justify-between border-b border-immersive-border pb-2 mb-3">
               <span className="text-xs text-immersive-muted flex items-center gap-1">
                 <CheckCircle className="w-3.5 h-3.5 text-immersive-green" />
-                Gemini Multi-factor Prediction
+                {scanResult.engineUsed || activeProviderName}
               </span>
               <span className="text-xs bg-immersive-gold/10 text-immersive-gold border border-immersive-gold/20 px-2 py-0.5 rounded font-bold">
                 Accuracy: {scanResult.confidence}%

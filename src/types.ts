@@ -65,4 +65,15 @@ export interface MarketAnalysisResponse {
   concept?: string;
   confirmations?: string[];
   riskProfile?: string;
+  engineUsed?: string;
+}
+
+export type AIProvider = 'built_in' | 'gemini' | 'openai' | 'anthropic' | 'groq' | 'deepseek' | 'custom';
+
+export interface AISettingsConfig {
+  provider: AIProvider;
+  apiKey: string;
+  customEndpoint?: string;
+  model: string;
+  temperature?: number;
 }
